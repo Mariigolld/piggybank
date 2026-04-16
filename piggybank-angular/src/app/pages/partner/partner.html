@@ -1,0 +1,418 @@
+<app-sidebar />
+
+<main class="main-content">
+  <!-- No Account State -->
+  @if (accounts().length === 0) {
+    <div style="text-align:center;padding:80px 24px">
+      <h2 style="font-size:22px;font-weight:700;margin-bottom:12px">No Partner Account</h2>
+      <p style="color:#64748b;margin-bottom:28px">Create a shared account and invite your partner,<br>or join one using an invite code.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" (click)="showCreateModal.set(true)">Create Shared Account</button>
+        <button class="btn btn-secondary" (click)="showJoinModal.set(true)">Join with Code</button>
+      </div>
+    </div>
+
+    @if (pendingAccounts().length > 0) {
+      <div class="card" style="margin-top:24px">
+        <div class="card-header"><div class="card-title">Waiting for Partner</div></div>
+        @for (p of pendingAccounts(); track p.id) {
+          <div style="padding:12px 0;border-bottom:1px solid #f1f5f9">
+            <strong>{{ p.name }}</strong>
+            <div style="font-size:13px;color:#64748b;margin-top:4px">
+              Invite code: <span style="font-weight:700;letter-spacing:2px;color:#6366f1">{{ p.inviteCode }}</span>
+            </div>
+          </div>
+        }
+        <div style="margin-top:16px">
+          <button class="btn btn-secondary" (click)="showJoinModal.set(true)">Join with Code</button>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Main Content -->
+  @if (accounts().length > 0) {
+    <header class="top-header">
+      <div class="greeting">
+        <h1>Partner</h1>
+        <p id="partnerInfo">{{ currentAccount()?.user2 ? myName + ' & ' + partnerName : 'Waiting for partner to join' }}</p>
+      </div>
+    </header>
+
+    @if (accounts().length > 1) {
+      <div class="account-selector">
+        <select (change)="onAccountChange($any($event.target).value)">
+          @for (a of accounts(); track a.id) {
+            <option [value]="a.id">{{ a.name }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn" [class.active]="activeTab()==='savings'" (click)="activeTab.set('savings')">Savings Goals</button>
+      <button class="tab-btn" [class.active]="activeTab()==='bills'" (click)="activeTab.set('bills')">Recurring Bills</button>
+      <button class="tab-btn" [class.active]="activeTab()==='budget'" (click)="activeTab.set('budget')">Shared Budget</button>
+    </div>
+
+    <!-- Savings Goals -->
+    @if (activeTab() === 'savings') {
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="font-size:18px;font-weight:700">Savings Goals</h2>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" [(ngModel)]="showArchived" (change)="loadGoals()"> Show archived
+            </label>
+            <button class="btn btn-primary" (click)="showAddGoalModal.set(true)">Add Goal</button>
+          </div>
+        </div>
+
+        @for (g of goals(); track g.id) {
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>{{ g.name }}</span>
+                @if (g.isArchived) { <span class="archived-label">Archived</span> }
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                @if (!g.isArchived) {
+                  <button class="btn btn-primary" style="font-size:12px;padding:5px 12px" (click)="openContrib(g.id)">Contribute</button>
+                  <button class="btn btn-secondary" style="font-size:12px;padding:5px 12px" (click)="archiveGoal(g.id)">Archive</button>
+                }
+                <button class="btn btn-danger btn-icon" title="Delete goal" (click)="deleteGoal(g.id)">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+              </div>
+            </div>
+            @if (g.description) { <p style="font-size:13px;color:#64748b;margin-bottom:8px">{{ g.description }}</p> }
+            <div class="progress-bar"><div class="progress-fill" [class.complete]="g.currentAmount >= g.targetAmount" [style.width.%]="goalPct(g)"></div></div>
+            <div class="amount-row" style="margin-top:6px">
+              <span>Saved: <strong>{{ fmt(g.currentAmount) }}</strong></span>
+              <span>Target: <strong>{{ fmt(g.targetAmount) }}</strong></span>
+            </div>
+            @if (g.targetDate) { <div style="font-size:12px;color:#94a3b8;margin-top:4px">Target date: {{ fmtDate(g.targetDate) }}</div> }
+            @if (g.contributions.length > 0) {
+              <div class="contrib-list">
+                @for (c of g.contributions.slice(0,3); track c.id) {
+                  <div class="contrib-item">
+                    <span class="contrib-who">{{ c.contributedBy.firstName }} {{ c.contributedBy.lastName }}</span>
+                    <span class="contrib-amount">+{{ fmt(c.amount) }}</span>
+                    <span class="contrib-date">{{ fmtDate(c.date) }}</span>
+                  </div>
+                }
+                @if (g.contributions.length > 3) {
+                  <div style="font-size:12px;color:#94a3b8;padding-top:4px">{{ g.contributions.length - 3 }} more contributions...</div>
+                }
+              </div>
+            }
+          </div>
+        }
+        @if (goals().length === 0) {
+          <div class="empty-state"><p>No savings goals yet. Start saving for something special!</p></div>
+        }
+      </div>
+    }
+
+    <!-- Recurring Bills -->
+    @if (activeTab() === 'bills') {
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="font-size:18px;font-weight:700">Recurring Bills</h2>
+          <button class="btn btn-primary" (click)="showAddBillModal.set(true)">Add Bill</button>
+        </div>
+
+        @for (bill of bills(); track bill.id) {
+          <div class="card" [style.opacity]="bill.isActive ? 1 : 0.6">
+            <div class="card-header">
+              <div class="card-title">
+                <span>{{ bill.name }}</span>
+                <span class="bill-freq">{{ freqLabels[bill.frequency] }}</span>
+                @if (!bill.isActive) { <span class="archived-label">Inactive</span> }
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <strong style="font-size:15px;font-weight:700;color:var(--text-primary)">{{ fmt(bill.amount) }}</strong>
+                @if (bill.isActive) {
+                  <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px" title="Pause bill" (click)="pauseBill(bill.id)">Pause</button>
+                } @else {
+                  <button class="btn btn-primary" style="font-size:12px;padding:4px 10px" title="Resume bill" (click)="resumeBill(bill.id)">Resume</button>
+                }
+                <button class="btn btn-danger btn-icon" title="Delete bill" (click)="deleteBill(bill.id)">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+              </div>
+            </div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:10px">{{ paidByLabels[bill.paidBy] }} · Due on the {{ ordinal(bill.dayOfMonth) }}</div>
+
+            @if (currentPayment(bill); as cp) {
+              <div class="payment-row" style="border-top:1px solid #f1f5f9;padding-top:10px">
+                <div>
+                  <span class="payment-month">{{ monthName(cp.month) }} {{ cp.year }}</span>
+                  <span style="font-size:11px;color:#94a3b8;margin-left:6px">this month</span>
+                </div>
+                @if (cp.isPaid) {
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span class="paid-badge">Paid</span>
+                    <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px" (click)="markUnpaid(bill.id, cp.month, cp.year)">Undo</button>
+                  </div>
+                } @else {
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span class="unpaid-badge">Unpaid</span>
+                    <button class="btn btn-primary" style="font-size:12px;padding:4px 10px" (click)="markPaid(bill.id, cp.month, cp.year)">Mark Paid</button>
+                  </div>
+                }
+              </div>
+            }
+
+            @for (p of recentPaidPayments(bill); track p.id) {
+              <div class="payment-row">
+                <span class="payment-month">{{ monthName(p.month) }} {{ p.year }}</span>
+                <span class="paid-badge">Paid</span>
+              </div>
+            }
+          </div>
+        }
+        @if (bills().length === 0) {
+          <div class="empty-state"><p>No recurring bills yet. Track shared bills like rent, utilities, and subscriptions.</p></div>
+        }
+      </div>
+    }
+
+    <!-- Shared Budget -->
+    @if (activeTab() === 'budget') {
+      <div>
+        <div class="month-nav">
+          <button class="btn btn-secondary btn-icon" (click)="changeMonth(-1)">◀</button>
+          <h3>{{ budgetMonthLabel }}</h3>
+          <button class="btn btn-secondary btn-icon" (click)="changeMonth(1)">▶</button>
+          <button class="btn btn-primary" (click)="openBudgetModal()">{{ budget() ? 'Edit Budget' : 'Set Budget' }}</button>
+          @if (budget()) {
+            <button class="btn btn-danger btn-icon" title="Delete budget" (click)="deleteBudget()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
+          }
+        </div>
+
+        @if (budget(); as b) {
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Monthly Overview</div>
+              <div style="font-size:13px;color:#64748b">{{ b.notes || '' }}</div>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="b.totalAllocated > 0 ? Math.min(100, (b.totalSpent / b.totalAllocated) * 100) : 0"></div>
+            </div>
+            <div class="amount-row" style="margin-top:6px">
+              <span>Spent: <strong [style.color]="b.totalSpent > b.totalAllocated ? '#ef4444' : ''">{{ fmt(b.totalSpent) }}</strong></span>
+              <span>Budget: <strong>{{ fmt(b.totalAllocated) }}</strong></span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:16px">Categories</div>
+            @for (cat of b.categories; track cat.id) {
+              <div class="budget-cat" [class.over-budget]="cat.spentAmount > cat.allocatedAmount">
+                <div class="budget-cat-header">
+                  <span class="budget-cat-name">{{ cat.icon }} {{ cat.categoryName }}</span>
+                  <span class="budget-cat-amounts">{{ fmt(cat.spentAmount) }} / {{ fmt(cat.allocatedAmount) }}{{ cat.spentAmount > cat.allocatedAmount ? ' (!!)' : '' }}</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="cat.allocatedAmount > 0 ? Math.min(100, (cat.spentAmount / cat.allocatedAmount) * 100) : 0"></div>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="empty-state">
+            <p>No budget set for this month yet.</p>
+            <button class="btn btn-primary" (click)="openBudgetModal()">Set Budget</button>
+          </div>
+        }
+      </div>
+    }
+  }
+</main>
+
+<!-- Create Account Modal -->
+@if (showCreateModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showCreateModal.set(false)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Shared Account</h3>
+        <button class="modal-close" (click)="showCreateModal.set(false)">&times;</button>
+      </div>
+      @if (!showCode()) {
+        <div class="form-group">
+          <label class="form-label">Account Name</label>
+          <input class="form-input" type="text" [(ngModel)]="createName" placeholder="e.g. Our Finances" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" (click)="showCreateModal.set(false)">Cancel</button>
+          <button class="btn btn-primary" (click)="createAccount()">Create</button>
+        </div>
+      } @else {
+        <p style="font-size:14px;color:#64748b;margin-bottom:12px">Share this code with your partner:</p>
+        <div class="invite-code-box">
+          <div class="code">{{ generatedCode() }}</div>
+          <p>They can join using this code from the Partner page.</p>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:16px" (click)="showCreateModal.set(false); showCode.set(false); init()">Done</button>
+      }
+    </div>
+  </div>
+}
+
+<!-- Join Modal -->
+@if (showJoinModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showJoinModal.set(false)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Join with Invite Code</h3>
+        <button class="modal-close" (click)="showJoinModal.set(false)">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Invite Code</label>
+        <input class="form-input" type="text" [(ngModel)]="joinCode" placeholder="XXXXXXXX"
+               style="text-transform:uppercase;letter-spacing:4px;font-size:20px;text-align:center;font-weight:700" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showJoinModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="joinAccount()">Join</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Add Goal Modal -->
+@if (showAddGoalModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showAddGoalModal.set(false)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">New Savings Goal</h3>
+        <button class="modal-close" (click)="showAddGoalModal.set(false)">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Goal Name</label>
+        <input class="form-input" type="text" [(ngModel)]="goalName" placeholder="e.g. Vacation Fund" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description (optional)</label>
+        <textarea class="form-input" [(ngModel)]="goalDesc" placeholder="What are you saving for?" rows="2" style="resize:vertical"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target Amount (RSD)</label>
+        <input class="form-input" type="number" [(ngModel)]="goalTarget" placeholder="0.00" min="0.01" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target Date (optional)</label>
+        <input class="form-input" type="date" [(ngModel)]="goalDate" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showAddGoalModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="createGoal()">Create Goal</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Add Contribution Modal -->
+@if (showContribModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showContribModal.set(false)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Contribution</h3>
+        <button class="modal-close" (click)="showContribModal.set(false)">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (RSD)</label>
+        <input class="form-input" type="number" [(ngModel)]="contribAmount" placeholder="0.00" min="0.01" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note (optional)</label>
+        <input class="form-input" type="text" [(ngModel)]="contribNote" placeholder="e.g. Monthly contribution" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showContribModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="addContrib()">Add</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Add Bill Modal -->
+@if (showAddBillModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showAddBillModal.set(false)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">New Recurring Bill</h3>
+        <button class="modal-close" (click)="showAddBillModal.set(false)">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bill Name</label>
+        <input class="form-input" type="text" [(ngModel)]="billName" placeholder="e.g. Rent, Netflix, Electricity" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Amount (RSD)</label>
+          <input class="form-input" type="number" [(ngModel)]="billAmount" placeholder="0.00" min="0.01" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Day of Month</label>
+          <input class="form-input" type="number" [(ngModel)]="billDay" value="1" min="1" max="31" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Frequency</label>
+          <select class="form-select" [(ngModel)]="billFrequency">
+            <option [ngValue]="BillFrequency.Monthly">Monthly</option>
+            <option [ngValue]="BillFrequency.Weekly">Weekly</option>
+            <option [ngValue]="BillFrequency.Yearly">Yearly</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Paid By</label>
+          <select class="form-select" [(ngModel)]="billPaidBy">
+            <option [ngValue]="BillPaidBy.Split50">50/50 Split</option>
+            <option [ngValue]="BillPaidBy.User1">{{ user1Name }}</option>
+            <option [ngValue]="BillPaidBy.User2">{{ user2Name }}</option>
+            <option [ngValue]="BillPaidBy.Alternating">Alternating</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showAddBillModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="createBill()">Add Bill</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Edit Budget Modal -->
+@if (showBudgetModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showBudgetModal.set(false)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ budget() ? 'Edit' : 'Set' }} Budget — {{ budgetMonthLabel }}</h3>
+        <button class="modal-close" (click)="showBudgetModal.set(false)">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <input class="form-input" type="text" [(ngModel)]="budgetNotes" placeholder="e.g. Tight month, cut dining" />
+      </div>
+      @for (cat of budgetCategories; track $index; let i = $index) {
+        <div class="budget-row">
+          <input class="form-input budget-icon-input" type="text" [(ngModel)]="cat.icon" placeholder="📁" />
+          <input class="form-input" type="text" placeholder="Category name" [(ngModel)]="cat.name" style="flex:1" />
+          <input class="form-input" type="number" placeholder="Amount" min="0.01" step="0.01" [(ngModel)]="cat.amount" style="width:110px" />
+          <button class="btn btn-secondary btn-icon" (click)="removeBudgetCategory(i)">✕</button>
+        </div>
+      }
+      <button class="btn btn-secondary" style="width:100%;margin-bottom:16px" (click)="addBudgetCategory()">+ Add Category</button>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showBudgetModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="saveBudget()">Save Budget</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,320 @@
+<app-sidebar />
+
+<main class="main-content">
+  <!-- Groups List View -->
+  @if (!selectedGroup()) {
+    <header class="top-header">
+      <div class="greeting">
+        <h1>Splitwise</h1>
+        <p>Split expenses with friends</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" (click)="showJoinModal.set(true)">Join Group</button>
+        <button class="btn btn-primary" (click)="showCreateModal.set(true)">+ New Group</button>
+      </div>
+    </header>
+
+    @for (g of groups(); track g.id) {
+      <div class="group-card" (click)="openGroup(g)">
+        <div class="group-card-main">
+          <div class="group-card-left">
+            <div class="group-card-name">{{ g.name }}</div>
+            @if (g.description) { <div class="group-card-desc">{{ g.description }}</div> }
+            <div class="group-card-chips">
+              <span class="group-chip members">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                {{ g.memberCount }} member{{ g.memberCount !== 1 ? 's' : '' }}
+              </span>
+              <span class="group-chip expenses">
+                {{ fmt(g.totalExpenses) }} RSD total
+              </span>
+              @if (g.inviteCode) {
+                <span class="group-chip code" (click)="copyCode(g.inviteCode, $event)" title="Click to copy">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  {{ g.inviteCode }}
+                </span>
+              }
+            </div>
+          </div>
+          <div class="group-card-arrow">›</div>
+        </div>
+      </div>
+    }
+    @if (groups().length === 0) {
+      <div class="empty-state" style="text-align:center;padding:80px 24px;color:#64748b">
+        <p style="margin-bottom:20px">No groups yet. Create one to start splitting expenses.</p>
+        <button class="btn btn-primary" (click)="showCreateModal.set(true)">Create Group</button>
+      </div>
+    }
+  }
+
+  <!-- Group Detail View -->
+  @if (selectedGroup(); as g) {
+    <div class="group-header">
+      <button class="back-btn" (click)="back()">←</button>
+      <div class="group-name-display">
+        <h2>{{ g.name }}</h2>
+        <p>{{ g.members?.length || g.memberCount }} members</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" (click)="openExpenseModal()">+ Add Expense</button>
+        <button class="btn btn-secondary" (click)="showInviteModal.set(true)">Invite Code</button>
+        <button class="btn btn-danger btn-icon" title="Delete group" (click)="deleteGroup()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- My Balance -->
+    @if (myBalance !== 0) {
+      <div class="user-balance-card" [class.positive]="myBalance > 0" [class.negative]="myBalance < 0">
+        <div class="balance-desc">{{ myBalance > 0 ? 'You are owed' : 'You owe' }}</div>
+        <div class="balance-amount">{{ fmt(Math.abs(myBalance)) }} RSD</div>
+      </div>
+    }
+
+    <!-- Members row -->
+    <div class="members-row">
+      @for (m of g.members; track m.id) {
+        <div class="member-chip" [class.admin]="m.user?.id === g.createdBy?.id" [class.pending]="m.status === 0">
+          <div class="member-avatar">{{ memberInitials(m) }}</div>
+          {{ memberName(m) }}
+          @if (m.status === 0) { <span class="pending-label">pending</span> }
+        </div>
+      }
+    </div>
+
+    <!-- Balances -->
+    @if (groupBalances.length > 0) {
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Balances</span>
+        </div>
+        @for (b of groupBalances; track b.fromId + b.toId) {
+          <div class="balance-item">
+            <div class="balance-flow">
+              <span class="balance-name">{{ b.fromName }}</span>
+              <span class="balance-arrow">owes</span>
+              <span class="balance-name">{{ b.toName }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="balance-item-amount">{{ fmt(b.amount) }} RSD</span>
+              @if (b.fromId === currentUserId || b.toId === currentUserId) {
+                <button class="btn-settle" (click)="settleFrom = b.fromId; settleTo = b.toId; settleAmount = b.amount; showSettleModal.set(true)">Settle</button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Expenses -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Expenses</span>
+      </div>
+      @for (exp of expenses(); track exp.id) {
+        <div class="expense-item">
+          <div class="expense-header">
+            <div>
+              <div class="expense-desc">{{ exp.description }}</div>
+              <div class="expense-meta">Paid by {{ exp.paidBy?.firstName }} {{ exp.paidBy?.lastName }} · {{ fmtDate(exp.date) }}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="expense-amount">{{ fmt(exp.amount) }} RSD</div>
+              <button class="btn btn-danger btn-icon" title="Delete expense" (click)="deleteExpense(exp.id)">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="expense-shares">
+            @for (s of exp.shares; track s.groupMemberId) {
+              <div class="share-item">
+                <span class="share-name">{{ s.user?.firstName }} {{ s.user?.lastName }}</span>
+                <div class="share-right">
+                  <span class="share-amount-text">{{ fmt(s.shareAmount) }} RSD</span>
+                  @if (s.user?.id !== exp.paidBy?.id) {
+                    @if (s.isPaid) {
+                      <span class="share-paid">Settled</span>
+                    } @else {
+                      <button class="btn-settle" (click)="quickSettleShare(exp, s)">Settle</button>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+      @if (expenses().length === 0) {
+        <div class="empty-state"><div class="empty-state-text">No expenses yet. Add one to start splitting.</div></div>
+      }
+    </div>
+  }
+</main>
+
+<!-- Join Group Modal -->
+@if (showJoinModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showJoinModal.set(false)">
+    <div class="modal">
+      <h3 class="modal-title">Join Group</h3>
+      <p style="font-size:14px;color:#64748b;margin-bottom:16px">Enter the invite code shared with you.</p>
+      @if (error()) { <div class="error-box">{{ error() }}</div> }
+      <div class="form-group">
+        <label class="form-label">Invite Code</label>
+        <input class="form-input" [(ngModel)]="joinCode" placeholder="e.g. ABC123" style="letter-spacing:2px;font-size:18px;text-transform:uppercase" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showJoinModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="joinGroup()">Join</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Create Group Modal -->
+@if (showCreateModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showCreateModal.set(false)">
+    <div class="modal">
+      <h3 class="modal-title">New Group</h3>
+      <div class="form-group">
+        <label class="form-label">Group Name</label>
+        <input class="form-input" [(ngModel)]="newGroupName" placeholder="e.g. Trip to Paris" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description (optional)</label>
+        <input class="form-input" [(ngModel)]="newGroupDesc" placeholder="What's this group for?" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showCreateModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="createGroup()">Create</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Invite Code Modal -->
+@if (showInviteModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showInviteModal.set(false)">
+    <div class="modal">
+      <h3 class="modal-title">Invite to Group</h3>
+      <p style="font-size:14px;color:#64748b;margin-bottom:16px">Share this code with someone so they can join the group.</p>
+      <div class="invite-code-box" (click)="copyInviteCode(selectedGroup()!.inviteCode)">
+        <span class="invite-code-text">{{ selectedGroup()?.inviteCode }}</span>
+        <span class="invite-copy-hint">Click to copy</span>
+      </div>
+      <div class="modal-actions" style="margin-top:20px">
+        <button class="btn btn-primary" (click)="showInviteModal.set(false)">Done</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Add Expense Modal -->
+@if (showExpenseModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showExpenseModal.set(false)">
+    <div class="modal">
+      <h3 class="modal-title">Add Expense</h3>
+      @if (error()) { <div class="error-box">{{ error() }}</div> }
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input class="form-input" [(ngModel)]="expDesc" placeholder="e.g. Dinner" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Amount (RSD)</label>
+          <input class="form-input" type="number" [(ngModel)]="expAmount" step="0.01" min="0.01" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input class="form-input" type="date" [(ngModel)]="expDate" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Paid By</label>
+        <select class="form-select" [(ngModel)]="expPaidBy">
+          @for (m of acceptedMembers; track m.id) {
+            <option [value]="m.user?.id">{{ memberName(m) }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Split Type</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn" [class.btn-primary]="expSplitType==='all'" [class.btn-secondary]="expSplitType!=='all'" (click)="expSplitType='all'">Equally (all)</button>
+          <button class="btn" [class.btn-primary]="expSplitType==='selected'" [class.btn-secondary]="expSplitType!=='selected'" (click)="expSplitType='selected'">Select members</button>
+          <button class="btn" [class.btn-primary]="expSplitType==='custom'" [class.btn-secondary]="expSplitType!=='custom'" (click)="expSplitType='custom'">Custom</button>
+        </div>
+      </div>
+      @if (expSplitType === 'selected') {
+        <div class="form-group">
+          <label class="form-label">Select Members</label>
+          <div class="member-selection">
+            @for (m of acceptedMembers; track m.id) {
+              <label class="member-checkbox" [class.selected]="isMemberSelected(m.id)" (click)="toggleMember(m.id)">
+                <div class="member-avatar">{{ memberInitials(m) }}</div>
+                {{ memberName(m) }}
+              </label>
+            }
+          </div>
+        </div>
+      }
+      @if (expSplitType === 'custom') {
+        <div class="form-group">
+          <label class="form-label">Custom Amounts (Total: {{ fmt(manualTotal) }} / {{ fmt(expAmount) }} RSD)</label>
+          @for (m of acceptedMembers; track m.id) {
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="flex:1;font-size:14px">{{ memberName(m) }}</span>
+              <input class="form-input" type="number" style="width:120px" placeholder="0.00"
+                (input)="updateManualShare(m.id, $any($event.target).value)" step="0.01" min="0" />
+            </div>
+          }
+        </div>
+      }
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showExpenseModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="addExpense()">Add Expense</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Settle Modal -->
+@if (showSettleModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showSettleModal.set(false)">
+    <div class="modal">
+      <h3 class="modal-title">Record Settlement</h3>
+      <div class="form-group">
+        <label class="form-label">From</label>
+        <select class="form-select" [(ngModel)]="settleFrom">
+          @for (m of acceptedMembers; track m.id) {
+            <option [value]="m.user?.id">{{ memberName(m) }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">To</label>
+        <select class="form-select" [(ngModel)]="settleTo">
+          @for (m of acceptedMembers; track m.id) {
+            <option [value]="m.user?.id">{{ memberName(m) }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (RSD)</label>
+        <input class="form-input" type="number" [(ngModel)]="settleAmount" step="0.01" min="0.01" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showSettleModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="addSettlement()">Record</button>
+      </div>
+    </div>
+  </div>
+}

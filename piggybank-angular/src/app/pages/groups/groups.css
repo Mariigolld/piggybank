@@ -1,0 +1,511 @@
+/* ── Card spacing in detail view ──────────────────────────────── */
+.card + .card {
+  margin-top: 16px;
+}
+
+/* ── Group Cards (list view) ─────────────────────────────────── */
+.group-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  border: 1.5px solid var(--border, #e5e7eb);
+  border-left: 4px solid var(--primary, #7c3aed);
+}
+
+.group-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border-color: #d1d5db;
+  border-left-color: var(--primary, #7c3aed);
+}
+
+.group-card-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.group-card-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.group-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  margin-bottom: 3px;
+}
+
+.group-card-desc {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.group-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.group-chip.members {
+  background: rgba(124,58,237,0.08);
+  color: #7c3aed;
+}
+
+.group-chip.expenses {
+  background: rgba(16,185,129,0.1);
+  color: #059669;
+}
+
+.group-chip.code {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
+}
+
+.group-chip.code:hover {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.group-chip.code.copied {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.group-card-arrow {
+  font-size: 22px;
+  color: #cbd5e1;
+  flex-shrink: 0;
+  transition: color 0.15s, transform 0.15s;
+}
+
+.group-card:hover .group-card-arrow {
+  color: #7c3aed;
+  transform: translateX(3px);
+}
+
+/* ── Group Detail Header ─────────────────────────────────────── */
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.back-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: #fff;
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #6b7280);
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.back-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.group-name-display {
+  flex: 1;
+}
+
+.group-name-display h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  line-height: 1.2;
+}
+
+.group-name-display p {
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+  margin-top: 3px;
+}
+
+/* ── Balance Card ───────────────────────────────────────────── */
+.user-balance-card {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 14px 18px;
+  color: var(--text-primary, #111827);
+  border: 1.5px solid var(--border, #e5e7eb);
+  border-left: 4px solid var(--primary, #7c3aed);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.user-balance-card.positive {
+  border-left-color: var(--success, #10b981);
+  background: #f0fdf4;
+}
+
+.user-balance-card.positive .balance-amount {
+  color: var(--success, #10b981);
+}
+
+.user-balance-card.negative {
+  border-left-color: var(--danger, #ef4444);
+  background: #fef2f2;
+}
+
+.user-balance-card.negative .balance-amount {
+  color: var(--danger, #ef4444);
+}
+
+.user-balance-card .balance-desc {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+}
+
+.user-balance-card .balance-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+}
+
+/* ── Members Row (no card wrapper) ─────────────────────────── */
+.members-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.pending-label {
+  font-size: 10px;
+  font-weight: 600;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 1px 6px;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+
+/* ── Members Grid ───────────────────────────────────────────── */
+.members-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.member-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 20px;
+  padding: 5px 12px 5px 5px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+}
+
+.member-chip.admin {
+  border-color: var(--primary, #7c3aed);
+  background: rgba(124,58,237,0.04);
+}
+
+.member-chip.pending {
+  opacity: 0.55;
+}
+
+.member-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary, #7c3aed);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Expense Items ──────────────────────────────────────────── */
+.expense-item {
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  padding: 16px 0;
+}
+
+.expense-item:last-child { border-bottom: none; }
+
+.expense-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.expense-desc {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.expense-meta {
+  font-size: 12px;
+  color: var(--text-muted, #9ca3af);
+  margin-top: 3px;
+}
+
+.expense-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+}
+
+.expense-shares {
+  background: #f9fafb;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  padding: 2px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.share-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.share-item:last-child { border-bottom: none; }
+
+.share-name {
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+}
+
+.share-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.share-amount-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+}
+
+.share-paid {
+  background: #f0fdf4;
+  color: #16a34a;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #bbf7d0;
+}
+
+.btn-settle {
+  background: var(--primary, #7c3aed);
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.btn-settle:hover {
+  background: var(--primary-dark, #5b21b6);
+}
+
+/* ── Settlement Items ───────────────────────────────────────── */
+.settlement-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.settlement-item:last-child { border-bottom: none; }
+
+.settlement-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.settlement-arrow {
+  color: var(--text-secondary, #64748b);
+  font-size: 16px;
+}
+
+.settlement-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--success, #10b981);
+}
+
+/* ── Member Selection (split type) ─────────────────────────── */
+.member-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.member-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border-radius: 20px;
+  padding: 6px 14px 6px 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.member-checkbox.selected {
+  background: rgba(124,58,237,0.1);
+  border-color: var(--primary, #7c3aed);
+  color: var(--primary, #7c3aed);
+}
+
+/* ── Form Row ───────────────────────────────────────────────── */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Balance Items ──────────────────────────────────────────── */
+.balance-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.balance-item:last-child { border-bottom: none; }
+
+.balance-flow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.balance-name {
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.balance-arrow {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #9ca3af);
+  background: #f3f4f6;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.balance-item-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--danger, #ef4444);
+}
+
+/* ── Invite Code Box ────────────────────────────────────────── */
+.invite-code-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f1f5f9;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.invite-code-box:hover {
+  background: #e0e7ff;
+  border-color: #7c3aed;
+}
+
+.invite-code-box.copied {
+  background: #dcfce7;
+  border-color: #16a34a;
+}
+
+.invite-code-text {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #1e1b4b;
+  font-family: monospace;
+}
+
+.invite-copy-hint {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.invite-code-box.copied .invite-copy-hint {
+  font-size: 0;
+}
+
+.invite-code-box.copied .invite-copy-hint::before {
+  content: "Copied!";
+  font-size: 12px;
+  color: #16a34a;
+}

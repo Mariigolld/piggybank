@@ -1,0 +1,295 @@
+<app-sidebar />
+
+<main class="main-content">
+  <header class="top-header">
+    <div class="greeting">
+      <h1>Hello, {{ user?.firstName || 'User' }}!</h1>
+      <p>Track your finances in one place</p>
+    </div>
+    <div class="header-actions">
+      <div class="user-avatar">{{ initials }}</div>
+    </div>
+  </header>
+
+  <div class="dashboard-grid">
+    <!-- Main Column -->
+    <div class="main-column">
+      <!-- Accounts -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">My Accounts</span>
+          <button class="btn btn-secondary" (click)="openAddAccount()">+ Add</button>
+        </div>
+        <div class="accounts-mini">
+          @for (a of accounts(); track a.id) {
+            <div class="account-mini-card" [class.secondary]="$index % 2 !== 0" (click)="openEditAccount(a)">
+              <div class="acc-name">{{ a.name }}</div>
+              <div class="acc-balance">{{ fmt(a.balance) }}</div>
+              <div class="acc-currency">{{ a.currency }}</div>
+              <button class="shared-budget-toggle" [class.active]="a.includeInSharedBudget"
+                (click)="toggleSharedBudget($event, a.id)"
+                [title]="a.includeInSharedBudget ? 'Included in shared budget — click to exclude' : 'Click to include in shared budget'">
+                {{ a.includeInSharedBudget ? 'Shared' : 'Personal' }}
+              </button>
+            </div>
+          }
+          @if (accounts().length === 0) {
+            <div style="color:#94a3b8;font-size:14px;padding:16px">No accounts yet.</div>
+          }
+        </div>
+      </div>
+
+      <!-- Activity Chart -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Activity</span>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-dot" style="background:#10b981"></span> Income</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span> Expenses</span>
+          </div>
+        </div>
+        <div class="chart-container tall">
+          <canvas #activityCanvas></canvas>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="label">Total Balance</div>
+          <div class="value">{{ fmt(totalBalance()) }} RSD</div>
+          <div class="change positive"><span>{{ accounts().length }} accounts</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Net This Month</div>
+          <div class="value" [style.color]="monthlyNet > 0 ? '#10b981' : monthlyNet < 0 ? '#ef4444' : ''">
+            {{ monthlyNet > 0 ? '+' : '' }}{{ fmt(monthlyNet) }} RSD
+          </div>
+          <div class="change" [class.positive]="monthlyNet > 0" [class.negative]="monthlyNet < 0">
+            <span>{{ monthlyNet > 0 ? 'Savings' : monthlyNet < 0 ? 'Loss' : 'Break even' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expenses by Category -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Expenses by Category</span>
+        </div>
+        <div class="chart-container">
+          <canvas #paymentsCanvas></canvas>
+        </div>
+        <div class="expense-breakdown">
+          @for (cat of categoryBreakdown(); track cat.name) {
+            <div class="expense-category-item">
+              <div class="cat-icon" [style.background]="cat.color + '20'" [style.color]="cat.color">{{ cat.icon }}</div>
+              <div class="cat-info">
+                <div class="cat-name">{{ cat.name }}</div>
+                <div class="cat-amount">{{ fmt(cat.amount) }} RSD</div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Side Column -->
+    <div class="side-column">
+      <!-- Balance Donut -->
+      <div class="balance-card">
+        <div class="balance-chart-container">
+          <canvas #donutCanvas></canvas>
+          <div class="balance-center-text">
+            <div class="balance-percent" style="font-size:15px;letter-spacing:-0.5px">{{ fmt(totalBalance()) }}</div>
+            <div class="balance-label">total</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="card" style="flex:1">
+        <div class="card-header">
+          <span class="card-title">Recent Transactions</span>
+          <button class="btn btn-secondary" (click)="openAddTransaction()">+ New</button>
+        </div>
+        <div class="transactions-list">
+          @for (t of transactions(); track t.id) {
+            <div class="transaction-item" (click)="confirmDeleteTx(t.id)">
+              <div class="tx-icon" [style.background]="t.type === TransactionType.Income ? '#dcfce7' : '#fef2f2'"
+                   [style.color]="t.type === TransactionType.Income ? '#16a34a' : '#dc2626'">
+                {{ t.categoryIcon || (t.type === TransactionType.Income ? '↑' : '↓') }}
+              </div>
+              <div class="tx-info">
+                <div class="tx-desc">{{ t.description }}</div>
+                <div class="tx-meta">{{ t.bankAccountName }} · {{ fmtDate(t.date) }}</div>
+              </div>
+              <div class="tx-amount" [style.color]="t.type === TransactionType.Income ? '#16a34a' : '#dc2626'">
+                {{ t.type === TransactionType.Income ? '+' : '-' }}{{ fmt(t.amount) }}
+              </div>
+            </div>
+          }
+          @if (transactions().length === 0) {
+            <div class="empty-state">
+              <div class="empty-state-icon">📋</div>
+              <div class="empty-state-text">No transactions</div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Categories -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Categories</span>
+        </div>
+        <div class="category-list">
+          @for (cat of categories(); track cat.id) {
+            <div class="category-item">
+              <span>{{ cat.icon }} {{ cat.name }}</span>
+              <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" (click)="deleteCategory(cat.id)">✕</button>
+            </div>
+          }
+        </div>
+        <div class="quick-add-form mt-16">
+          <div class="form-row">
+            <input class="form-input" [(ngModel)]="newCategoryName" placeholder="New category..." maxlength="50" />
+            <input class="form-input" [(ngModel)]="newCategoryIcon" placeholder="📁" maxlength="4" style="width:60px;text-align:center" />
+          </div>
+          <button class="btn btn-primary mt-16" style="width:100%" (click)="addCategory()">Add category</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Quick Add Button -->
+<button class="quick-expense-btn" (click)="openAddTransaction()" title="Add transaction">+</button>
+
+<!-- Account Modal -->
+@if (showAccountModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showAccountModal.set(false)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ editingAccountId() ? 'Edit Account' : 'Add Account' }}</h3>
+        <button class="modal-close" (click)="showAccountModal.set(false)">&times;</button>
+      </div>
+      @if (accountError()) { <div class="error-box">{{ accountError() }}</div> }
+      <div class="form-group">
+        <label class="form-label">Account Name</label>
+        <input class="form-input" [(ngModel)]="accName" placeholder="e.g. Main Account" required />
+      </div>
+      @if (!editingAccountId()) {
+        <div class="form-group">
+          <label class="form-label">Initial Balance</label>
+          <input class="form-input" type="number" [(ngModel)]="accBalance" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Currency</label>
+          <select class="form-select" [(ngModel)]="accCurrency">
+            <option value="RSD">RSD</option>
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Budget Tracking</label>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn" style="flex:1"
+              [style.background]="!accShared ? '#ede9fe' : '#f1f5f9'"
+              [style.color]="!accShared ? '#7c3aed' : '#64748b'"
+              [style.border]="!accShared ? '2px solid #7c3aed' : '2px solid transparent'"
+              (click)="accShared = false">Personal</button>
+            <button type="button" class="btn" style="flex:1"
+              [style.background]="accShared ? '#ede9fe' : '#f1f5f9'"
+              [style.color]="accShared ? '#7c3aed' : '#64748b'"
+              [style.border]="accShared ? '2px solid #7c3aed' : '2px solid transparent'"
+              (click)="accShared = true">Shared</button>
+          </div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:6px">
+            {{ accShared ? 'Expenses count toward shared budget with partner' : 'Expenses are personal only' }}
+          </div>
+        </div>
+      }
+      <div class="modal-actions">
+        @if (editingAccountId()) {
+          <button class="btn btn-danger" style="margin-right:auto" (click)="confirmDeleteAccount(editingAccountId()!)">Delete</button>
+        }
+        <button class="btn btn-secondary" (click)="showAccountModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="saveAccount()">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Transaction Modal -->
+@if (showTxModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showTxModal.set(false)">
+    <div class="modal">
+      <div class="modal-header" [style.background]="txType() === TransactionType.Expense ? '#dc2626' : '#10b981'"
+           style="margin:-28px -28px 20px -28px;padding:20px 28px;border-radius:12px 12px 0 0;color:#fff">
+        <h3 class="modal-title" style="color:#fff">{{ txType() === TransactionType.Expense ? 'New Expense' : 'New Income' }}</h3>
+        <button class="modal-close" style="background:rgba(255,255,255,0.2);color:#fff" (click)="showTxModal.set(false)">&times;</button>
+      </div>
+      @if (txError()) { <div class="error-box">{{ txError() }}</div> }
+      <div style="display:flex;gap:8px;margin-bottom:20px">
+        <button type="button" class="btn" style="flex:1" [style.background]="txType()===TransactionType.Expense?'#fef2f2':'#f1f5f9'" [style.color]="txType()===TransactionType.Expense?'#ef4444':'#64748b'" [style.border]="txType()===TransactionType.Expense?'2px solid #ef4444':'2px solid transparent'" (click)="txType.set(TransactionType.Expense)">Expense</button>
+        <button type="button" class="btn" style="flex:1" [style.background]="txType()===TransactionType.Income?'#dcfce7':'#f1f5f9'" [style.color]="txType()===TransactionType.Income?'#16a34a':'#64748b'" [style.border]="txType()===TransactionType.Income?'2px solid #16a34a':'2px solid transparent'" (click)="txType.set(TransactionType.Income)">Income</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (RSD)</label>
+        <input class="form-input" type="number" [(ngModel)]="txAmount" step="0.01" min="0.01" placeholder="0.00" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Account</label>
+        <select class="form-select" [(ngModel)]="txAccountId">
+          @for (a of accounts(); track a.id) {
+            <option [value]="a.id">{{ a.name }}</option>
+          }
+        </select>
+      </div>
+      @if (txType() === TransactionType.Expense) {
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" [(ngModel)]="txCategoryId">
+            @for (c of categories(); track c.id) {
+              <option [value]="c.id">{{ c.icon }} {{ c.name }}</option>
+            }
+          </select>
+        </div>
+      }
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input class="form-input" [(ngModel)]="txDescription" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" type="date" [(ngModel)]="txDate" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <input class="form-input" [(ngModel)]="txNotes" placeholder="..." />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showTxModal.set(false)">Cancel</button>
+        <button class="btn btn-primary" (click)="saveTransaction()">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Confirm Modal -->
+@if (showConfirmModal()) {
+  <div class="modal-overlay active" (click)="$event.target === $event.currentTarget && showConfirmModal.set(false)">
+    <div class="modal" style="max-width:380px">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirm</h3>
+        <button class="modal-close" (click)="showConfirmModal.set(false)">&times;</button>
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:24px">{{ confirmMessage() }}</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showConfirmModal.set(false)">Cancel</button>
+        <button class="btn btn-danger" (click)="runConfirm()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

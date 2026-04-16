@@ -1,0 +1,15 @@
+# Angular
+piggybank-angular/node_modules/
+piggybank-angular/dist/
+piggybank-angular/.angular/
+
+# .NET build artifacts
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+**/*.user
+
+# Environment / secrets
+**/appsettings.Development.json
